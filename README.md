@@ -2,7 +2,7 @@
 
 Linear model of a DC motor and simulation of its speed and position control in Python. Numpy and scipy only.
 
-I modeled DC motors as linear dynamic systems in MATLAB/Simulink for mobile prostheses. This repo is a **public rebuild** of that work: a new, independent implementation in Python with **example parameters**, no prosthesis data and none of the original models. It is an educational model, not a design for a real prosthesis or any medical use.
+I modeled DC motors as linear dynamic systems in MATLAB/Simulink for mobile prostheses. This repo is a **public rebuild** of that work, developed together with Eduardo Rodríguez Bunster: a new, independent implementation in Python with **example parameters**, no prosthesis data and none of the original models. It is an educational model, not a design for a real prosthesis or any medical use.
 
 ![Closed-loop responses](docs/pid.png)
 
