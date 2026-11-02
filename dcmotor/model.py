@@ -6,34 +6,41 @@ from scipy import signal
 
 @dataclass(frozen=True)
 class Motor:
-    R: float = 1.2
-    L: float = 0.002
-    J: float = 2e-5
-    b: float = 1e-5
-    Kt: float = 0.03
-    Ke: float = 0.03
+    """Defaults are Table 1 of the paper (R, L, B, J, Km, Ka)."""
+    R: float = 10.0
+    L: float = 1e-3
+    J: float = 0.01
+    B: float = 0.1
+    Km: float = 0.01
+    Ka: float = 0.01
 
     def state_space(self):
-        """States [i, w, theta]; inputs [V, T_load]; outputs [w, theta]."""
-        A = np.array([[-self.R / self.L, -self.Ke / self.L, 0.0],
-                      [self.Kt / self.J, -self.b / self.J, 0.0],
+        """States [i, w, theta]; inputs [v, T_load]; outputs [i, w, theta, T].
+
+        Equations (1) to (4) of the paper, plus a load torque on the mechanical
+        side that the paper leaves out of its open-loop model.
+        """
+        A = np.array([[-self.R / self.L, -self.Ka / self.L, 0.0],
+                      [self.Km / self.J, -self.B / self.J, 0.0],
                       [0.0, 1.0, 0.0]])
-        B = np.array([[1.0 / self.L, 0.0],
-                      [0.0, -1.0 / self.J],
-                      [0.0, 0.0]])
-        C = np.array([[0.0, 1.0, 0.0],
-                      [0.0, 0.0, 1.0]])
-        D = np.zeros((2, 2))
-        return A, B, C, D
+        Bm = np.array([[1.0 / self.L, 0.0],
+                       [0.0, -1.0 / self.J],
+                       [0.0, 0.0]])
+        C = np.array([[1.0, 0.0, 0.0],
+                      [0.0, 1.0, 0.0],
+                      [0.0, 0.0, 1.0],
+                      [self.Km, 0.0, 0.0]])
+        D = np.zeros((4, 2))
+        return A, Bm, C, D
 
     def speed_tf(self):
-        """Voltage to angular speed: Kt / ((J s + b)(L s + R) + Kt Ke)."""
-        den = np.polymul([self.J, self.b], [self.L, self.R])
-        den = np.polyadd(den, [self.Kt * self.Ke])
-        return signal.TransferFunction([self.Kt], den)
+        """Voltage to angular speed: Km / ((J s + B)(L s + R) + Km Ka)."""
+        den = np.polymul([self.J, self.B], [self.L, self.R])
+        den = np.polyadd(den, [self.Km * self.Ka])
+        return signal.TransferFunction([self.Km], den)
 
     def dc_gain(self):
-        return self.Kt / (self.b * self.R + self.Kt * self.Ke)
+        return self.Km / (self.B * self.R + self.Km * self.Ka)
 
     def poles(self):
         return np.roots(self.speed_tf().den)

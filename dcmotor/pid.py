@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 
 import numpy as np
-from scipy import signal
 
 
 @dataclass
@@ -43,28 +42,3 @@ class PID:
         if self.anti_windup:
             self.integral += self.kb * (u - u_unsat) * self.ts
         return u
-
-
-def simulate(motor, controller, setpoint, t_end=0.5, ts=1e-3, mode="speed",
-             load=None, setpoint_fn=None):
-    """Closed loop with a zero-order-hold plant. `mode` is "speed" or "position".
-    `load` is a function t -> load torque. Returns t, output, voltage."""
-    A, B, C, D = motor.state_space()
-    Ad, Bd, _, _, _ = signal.cont2discrete((A, B, C, D), ts, method="zoh")
-    n = int(round(t_end / ts))
-    t = np.arange(n) * ts
-    x = np.zeros(3)
-    out = np.zeros(n)
-    volts = np.zeros(n)
-    idx = 0 if mode == "speed" else 1
-    controller.ts = ts
-    controller.reset()
-    for k in range(n):
-        y = C[idx] @ x
-        out[k] = y
-        sp = setpoint_fn(t[k]) if setpoint_fn else setpoint
-        u = controller.step(sp, y)
-        volts[k] = u
-        tl = load(t[k]) if load else 0.0
-        x = Ad @ x + Bd @ np.array([u, tl])
-    return t, out, volts

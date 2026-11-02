@@ -2,20 +2,17 @@ import numpy as np
 from scipy import signal
 
 
-def step_speed(motor, volts=1.0, t_end=0.5, n=2000):
-    t = np.linspace(0.0, t_end, n)
-    t, y = signal.step(motor.speed_tf(), T=t)
-    return t, volts * y
+def open_loop(motor, volts=12.0, t_end=10.0, n=2001, load=0.0):
+    """Open-loop step on the voltage, as in the paper's Simulink model.
 
-
-def load_step_speed(motor, volts, torque, t_end=0.5, n=2000):
-    """Speed after a voltage step with a constant load torque applied at t = 0."""
+    Returns t and a dict with current (A), speed (rad/s), angle (rad) and
+    output torque (N m).
+    """
     A, B, C, D = motor.state_space()
-    sys = signal.StateSpace(A, B, C, D)
     t = np.linspace(0.0, t_end, n)
-    u = np.tile([volts, torque], (n, 1))
-    t, y, _ = signal.lsim(sys, U=u, T=t)
-    return t, y[:, 0]
+    u = np.tile([volts, load], (n, 1))
+    t, y, _ = signal.lsim(signal.StateSpace(A, B, C, D), U=u, T=t)
+    return t, {"current": y[:, 0], "speed": y[:, 1], "angle": y[:, 2], "torque": y[:, 3]}
 
 
 def metrics(t, y, setpoint):
